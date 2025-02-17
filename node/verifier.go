@@ -3,20 +3,30 @@ package node
 import (
 	"fmt"
 	"log"
-	"math/rand"
-	"net/http"
-	"time"
 
 	"github.com/Layer-Edge/light-node/clients"
 	"github.com/Layer-Edge/light-node/utils"
-	"github.com/go-resty/resty/v2"
 )
 
-type VerifyPayload struct {
-	Operation    string      `json:"operation"`
-	Data         []string    `json:"data"`
-	ProofRequest interface{} `json:"proof_request"` // Using interface{} since it can be null
-	Proof        *Proof      `json:"proof"`
+type ZKProverPayload struct {
+	Operation    string   `json:"operation"`
+	Data         []string `json:"data"`
+	ProofRequest *string  `json:"proof_request"` // Using interface{} since it can be null
+	Proof        *Proof   `json:"proof"`
+}
+
+type ZKProverResponse struct {
+	Root          string             `json:"root"`
+	Proof         *Proof             `json:"proof"`
+	Verified      bool               `json:"verified"`
+	Visualization *TreeVisualization `json:"visualization"`
+	Receipt       string             `json:"receipt"`
+}
+
+type TreeVisualization struct {
+	LevelSizes        []uint64   `json:"level_sizes"`
+	TreeStructure     [][]string `json:"tree_structure"`
+	DataToHashMapping [][]string `json:"data_to_hash_mapping"`
 }
 
 type Proof struct {
@@ -24,33 +34,32 @@ type Proof struct {
 	ProofPath [][]interface{} `json:"proof_path"` // Each element is [string, bool]
 }
 
-func postRequest(url string, data VerifyPayload) error {
-	// Import at top of file: "github.com/go-resty/resty/v2"
-	client := resty.New()
-
-	// Set default headers, timeout
-	client.
-		SetTimeout(time.Second*10).
-		SetHeader("Authorization", "Bearer your-token-here")
-
-	// Make request
-	resp, err := client.R().
-		SetHeader("Content-Type", "application/json").
-		SetBody(data).
-		Post(url)
-
+func proveProof(data []string, proof_request string) (*Proof, error) {
+	resp, err := clients.PostRequest[ZKProverPayload, ZKProverResponse]("http://34.57.83.179:3000/process", ZKProverPayload{
+		Operation:    "prove",
+		Data:         data,
+		ProofRequest: &proof_request,
+		Proof:        nil,
+	})
 	if err != nil {
-		return fmt.Errorf("error making request: %v", err)
+		return nil, fmt.Errorf("proof verification error: %v", err)
 	}
+	log.Printf("verification done: %v", resp)
+	return resp.Proof, nil
+}
 
-	// Check status code
-	if resp.StatusCode() != http.StatusOK {
-		return fmt.Errorf("unexpected status code: %d, body: %s",
-			resp.StatusCode(), string(resp.Body()))
+func verifyProofs(data []string, proof Proof) (*string, error) {
+	resp, err := clients.PostRequest[ZKProverPayload, ZKProverResponse]("http://34.57.83.179:3000/process", ZKProverPayload{
+		Operation:    "verify",
+		Data:         data,
+		ProofRequest: nil,
+		Proof:        &proof,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("proof verification error: %v", err)
 	}
-
-	fmt.Printf("Response: %s\n", string(resp.Body()))
-	return nil
+	log.Printf("verification done: %v\n", resp)
+	return &resp.Receipt, nil
 }
 
 func CollectSampleAndVerify() {
@@ -71,17 +80,17 @@ func CollectSampleAndVerify() {
 		log.Fatalf("failed to fetch tree data: %v", err)
 	}
 
-	sampleSize := rand.Intn(len(tree.Leaves)-1) + 1
+	sample := utils.RandomElement[string](tree.Leaves)
 
-	sample := utils.RandomSample(tree.Leaves, sampleSize)
+	proof, err := proveProof(tree.Leaves, sample)
+	if err != nil {
+		log.Fatalf("failed to prove sample: %v", err)
+	}
 
-	err = postRequest("http://34.57.83.179:3000/process", VerifyPayload{
-		Operation:    "verify",
-		Data:         sample,
-		ProofRequest: nil,
-		Proof:        nil, // WIP to hash mapping from contract response
-	})
+	receipt, err := verifyProofs(tree.Leaves, *proof)
 	if err != nil {
 		log.Fatalf("failed to verify sample: %v", err)
 	}
+
+	log.Printf("Sample Data %v verified with receipt %v\n", sample, receipt)
 }

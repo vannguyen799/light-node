@@ -1,6 +1,6 @@
 # Variables
 BINARY_NAME := le-light-node
-OUTPUT_DIR := build
+OUTPUT_DIR := bin
 SOURCE_DIR := ./
 GO_FILES := $(wildcard $(SOURCE_DIR)/*.go)
 

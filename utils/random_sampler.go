@@ -5,8 +5,6 @@ import (
 	"time"
 )
 
-// RandomSample returns n random elements from the input slice
-// The type parameter T can be any type
 func RandomSample[T any](arr []T, n int) []T {
 	if n > len(arr) {
 		n = len(arr)
@@ -20,4 +18,10 @@ func RandomSample[T any](arr []T, n int) []T {
 	})
 
 	return shuffled[:n]
+}
+
+func RandomElement[T any](arr []T) T {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	randomIndex := r.Intn(len(arr))
+	return arr[randomIndex]
 }
