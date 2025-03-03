@@ -6,14 +6,10 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/Layer-Edge/light-node/config"
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-)
-
-const (
-	grpcURL      = "34.31.74.109:9090"                                                 // Replace with your gRPC endpoint
-	contractAddr = "cosmos1ufs3tlq4umljk0qfe8k5ya0x6hpavn897u2cnf9k0en9jr7qarqqt56709" // Replace with your contract address
 )
 
 type MerkleTree struct {
@@ -36,11 +32,18 @@ type QueryListTreeIDs struct {
 type CosmosQueryClient struct {
 	conn        *grpc.ClientConn
 	queryClient wasmtypes.QueryClient
+	cfg         *config.Config
+}
+
+func NewCosmosQueryClient(cfg *config.Config) *CosmosQueryClient {
+	return &CosmosQueryClient{
+		cfg: cfg,
+	}
 }
 
 func (cqc *CosmosQueryClient) Init() error {
 	// Connect to gRPC client
-	conn, err := grpc.NewClient(grpcURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(cqc.cfg.GRPC.URL, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return fmt.Errorf("failed to connect to gRPC: %v", err)
 	}
@@ -68,7 +71,7 @@ func (cqc *CosmosQueryClient) GetMerkleTreeData(id string) (*MerkleTree, error) 
 	res, err := cqc.queryClient.SmartContractState(
 		context.Background(),
 		&wasmtypes.QuerySmartContractStateRequest{
-			Address:   contractAddr,
+			Address:   cqc.cfg.Cosmos.ContractAddr,
 			QueryData: queryBytes,
 		},
 	)
@@ -82,7 +85,7 @@ func (cqc *CosmosQueryClient) GetMerkleTreeData(id string) (*MerkleTree, error) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal tree data: %v", err)
 	}
-
+	log.Println("Received tree: ", tree)
 	return &tree, nil
 }
 
@@ -97,7 +100,7 @@ func (cqc *CosmosQueryClient) ListMerkleTreeIds() ([]string, error) {
 	res, err := cqc.queryClient.SmartContractState(
 		context.Background(),
 		&wasmtypes.QuerySmartContractStateRequest{
-			Address:   contractAddr,
+			Address:   cqc.cfg.Cosmos.ContractAddr,
 			QueryData: queryBytes,
 		},
 	)

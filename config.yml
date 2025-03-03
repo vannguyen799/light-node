@@ -1,0 +1,13 @@
+# Configuration for Light Node
+grpc:
+  url: "34.31.74.109:9090"
+
+cosmos:
+  contract_addr: "cosmos1ufs3tlq4umljk0qfe8k5ya0x6hpavn897u2cnf9k0en9jr7qarqqt56709"
+
+zk_prover:
+  url: "http://34.57.83.179:3000"
+
+api:
+  auth_token: "your-token-here"
+  timeout_seconds: 100

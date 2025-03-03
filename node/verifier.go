@@ -5,13 +5,14 @@ import (
 	"log"
 
 	"github.com/Layer-Edge/light-node/clients"
+	"github.com/Layer-Edge/light-node/config"
 	"github.com/Layer-Edge/light-node/utils"
 )
 
 type ZKProverPayload struct {
 	Operation    string   `json:"operation"`
 	Data         []string `json:"data"`
-	ProofRequest *string  `json:"proof_request"` // Using interface{} since it can be null
+	ProofRequest *string  `json:"proof_request"` // Using pointer since it can be null
 	Proof        *Proof   `json:"proof"`
 }
 
@@ -34,63 +35,100 @@ type Proof struct {
 	ProofPath [][]interface{} `json:"proof_path"` // Each element is [string, bool]
 }
 
-func proveProof(data []string, proof_request string) (*Proof, error) {
-	resp, err := clients.PostRequest[ZKProverPayload, ZKProverResponse]("http://34.57.83.179:3000/process", ZKProverPayload{
+// Verifier handles proof verification operations
+type Verifier struct {
+	restClient   *clients.RestClient
+	cosmosClient *clients.CosmosQueryClient
+	cfg          *config.Config
+}
+
+// NewVerifier creates a new verifier with the given configuration
+func NewVerifier(cfg *config.Config) *Verifier {
+	return &Verifier{
+		restClient:   clients.NewRestClient(cfg),
+		cosmosClient: clients.NewCosmosQueryClient(cfg),
+		cfg:          cfg,
+	}
+}
+
+func (v *Verifier) proveProof(data []string, proofRequest string) (*Proof, error) {
+	payload := ZKProverPayload{
 		Operation:    "prove",
 		Data:         data,
-		ProofRequest: &proof_request,
+		ProofRequest: &proofRequest,
 		Proof:        nil,
-	})
+	}
+	
+	var response ZKProverResponse
+	err := v.restClient.PostRequest(
+		v.cfg.ZKProver.URL+"/process", 
+		payload,
+		&response,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("proof verification error: %v", err)
 	}
-	log.Printf("verification done: %v", resp)
-	return resp.Proof, nil
+	
+	log.Printf("verification done: %v", response)
+	return response.Proof, nil
 }
 
-func verifyProofs(data []string, proof Proof) (*string, error) {
-	resp, err := clients.PostRequest[ZKProverPayload, ZKProverResponse]("http://34.57.83.179:3000/process", ZKProverPayload{
+func (v *Verifier) verifyProofs(data []string, proof Proof) (*string, error) {
+	payload := ZKProverPayload{
 		Operation:    "verify",
 		Data:         data,
 		ProofRequest: nil,
 		Proof:        &proof,
-	})
+	}
+	
+	var response ZKProverResponse
+	err := v.restClient.PostRequest(
+		v.cfg.ZKProver.URL+"/process", 
+		payload,
+		&response,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("proof verification error: %v", err)
 	}
-	log.Printf("verification done: %v\n", resp)
-	return &resp.Receipt, nil
+	
+	log.Printf("verification done: %v\n", response)
+	return &response.Receipt, nil
 }
 
-func CollectSampleAndVerify() {
-	cosmosQueryClient := clients.CosmosQueryClient{}
-	err := cosmosQueryClient.Init()
+func (v *Verifier) CollectSampleAndVerify() error {
+	err := v.cosmosClient.Init()
 	if err != nil {
-		log.Fatalf("failed to initialize cosmos query client: %v", err)
+		return fmt.Errorf("failed to initialize cosmos query client: %v", err)
 	}
-	defer cosmosQueryClient.Close()
+	defer v.cosmosClient.Close()
 
-	treeIds, err := cosmosQueryClient.ListMerkleTreeIds()
+	treeIds, err := v.cosmosClient.ListMerkleTreeIds()
 	if err != nil {
-		log.Fatalf("failed to fetch tree ids: %v", err)
+		return fmt.Errorf("failed to fetch tree ids: %v", err)
+	}
+	log.Println("Received tree ids: ", treeIds)
+	
+	if len(treeIds) == 0 {
+		return fmt.Errorf("no tree ids found")
 	}
 
-	tree, err := cosmosQueryClient.GetMerkleTreeData(treeIds[len(treeIds)-1])
+	tree, err := v.cosmosClient.GetMerkleTreeData(treeIds[0])
 	if err != nil {
-		log.Fatalf("failed to fetch tree data: %v", err)
+		return fmt.Errorf("failed to fetch tree data: %v", err)
 	}
 
 	sample := utils.RandomElement[string](tree.Leaves)
 
-	proof, err := proveProof(tree.Leaves, sample)
+	proof, err := v.proveProof(tree.Leaves, sample)
 	if err != nil {
-		log.Fatalf("failed to prove sample: %v", err)
+		return fmt.Errorf("failed to prove sample: %v", err)
 	}
 
-	receipt, err := verifyProofs(tree.Leaves, *proof)
+	receipt, err := v.verifyProofs(tree.Leaves, *proof)
 	if err != nil {
-		log.Fatalf("failed to verify sample: %v", err)
+		return fmt.Errorf("failed to verify sample: %v", err)
 	}
 
 	log.Printf("Sample Data %v verified with receipt %v\n", sample, receipt)
+	return nil
 }

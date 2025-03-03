@@ -6,38 +6,53 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Layer-Edge/light-node/config"
 	"github.com/go-resty/resty/v2"
 )
 
-func PostRequest[T any, R any](url string, requestData T) (*R, error) {
+// RestClient encapsulates the API client with configuration
+type RestClient struct {
+	client *resty.Client
+	cfg    *config.Config
+}
+
+// NewRestClient creates a new REST client with the given configuration
+func NewRestClient(cfg *config.Config) *RestClient {
 	client := resty.New()
-
-	// Set default headers, timeout
+	
+	// Set default headers, timeout from config
 	client.
-		SetTimeout(time.Second*10).
-		SetHeader("Authorization", "Bearer your-token-here")
+		SetTimeout(time.Second * time.Duration(cfg.API.Timeout)).
+		SetHeader("Authorization", fmt.Sprintf("Bearer %s", cfg.API.AuthToken))
+		
+	return &RestClient{
+		client: client,
+		cfg:    cfg,
+	}
+}
 
+// PostRequest makes a POST request and unmarshals the response into the provided response object
+func (rc *RestClient) PostRequest(url string, requestData interface{}, response interface{}) error {
 	// Make request
-	resp, err := client.R().
+	resp, err := rc.client.R().
 		SetHeader("Content-Type", "application/json").
 		SetBody(requestData).
 		Post(url)
 
 	if err != nil {
-		return nil, fmt.Errorf("error making request: %v", err)
+		return fmt.Errorf("error making request: %v", err)
 	}
 
 	// Check status code
 	if resp.StatusCode() != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d, body: %s",
+		return fmt.Errorf("unexpected status code: %d, body: %s",
 			resp.StatusCode(), string(resp.Body()))
 	}
 
-	// Parse response into generic type
-	var response R
-	if err := json.Unmarshal(resp.Body(), &response); err != nil {
-		return nil, fmt.Errorf("error parsing response: %v", err)
+	// Parse response into provided response object
+	if err := json.Unmarshal(resp.Body(), response); err != nil {
+		return fmt.Errorf("error parsing response: %v", err)
 	}
 
-	return &response, nil
+	return nil
 }

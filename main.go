@@ -9,10 +9,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Layer-Edge/light-node/config"
 	"github.com/Layer-Edge/light-node/node"
 )
 
-func Worker(ctx context.Context, wg *sync.WaitGroup, id int) {
+func Worker(ctx context.Context, wg *sync.WaitGroup, id int, verifier *node.Verifier) {
 	defer wg.Done()
 	for {
 		select {
@@ -21,13 +22,22 @@ func Worker(ctx context.Context, wg *sync.WaitGroup, id int) {
 			return
 		default:
 			fmt.Printf("Worker %d is running...\n", id)
-			node.CollectSampleAndVerify()
+			err := verifier.CollectSampleAndVerify()
+			if err != nil {
+				fmt.Printf("Worker %d encountered error: %v\n", id, err)
+			}
 			time.Sleep(5 * time.Second)
 		}
 	}
 }
 
 func main() {
+	// Load configuration
+	cfg := config.GetConfig()
+
+	// Create verifier with configuration
+	verifier := node.NewVerifier(&cfg)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -38,7 +48,7 @@ func main() {
 	signal.Notify(signalChan, syscall.SIGABRT, syscall.SIGTERM)
 
 	wg.Add(1)
-	go Worker(ctx, &wg, 1)
+	go Worker(ctx, &wg, 1, verifier)
 
 	<-signalChan
 	fmt.Println("\nReceived interrupt signal. Shutting down gracefully...")
