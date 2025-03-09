@@ -8,13 +8,6 @@ struct MerkleProof {
     proof_path: Vec<(String, bool)>, // (hash, is_right)
 }
 
-#[derive(Serialize, Deserialize)]
-struct TreeVisualization {
-    level_sizes: Vec<usize>,
-    tree_structure: Vec<Vec<String>>,
-    data_to_hash_mapping: Vec<(String, String)>,
-}
-
 struct MerkleTree {
     leaves: Vec<String>,
     nodes: Vec<Vec<String>>,
@@ -36,38 +29,69 @@ impl MerkleTree {
         format!("{:x}", hasher.finalize())
     }
 
-    fn get_visualization(&self) -> TreeVisualization {
-        let mut level_sizes = Vec::new();
-        let mut tree_structure = Vec::new();
+    fn insert(&mut self, data: String) {
+        let leaf_hash = Self::hash(&data);
+        self.leaves.push(leaf_hash.clone());
+        self.data_values.push(data);
         
-        // Add leaves level only once
-        level_sizes.push(self.leaves.len());
-        tree_structure.push(self.leaves.clone());
+        // Rebuild the tree after inserting new leaf
+        self.nodes.clear();
+        let mut current_level = self.leaves.clone();
         
-        // Add internal nodes
-        for level in &self.nodes {
-            level_sizes.push(level.len());
-            tree_structure.push(level.clone());
-        }
-
-        // Create data to hash mapping
-        let data_to_hash_mapping = self.data_values.iter()
-            .zip(self.leaves.iter())
-            .map(|(data, hash)| (data.clone(), hash.clone()))
-            .collect();
-
-        TreeVisualization {
-            level_sizes,
-            tree_structure,
-            data_to_hash_mapping,
+        while current_level.len() > 1 {
+            let mut next_level = Vec::new();
+            
+            for chunk in current_level.chunks(2) {
+                if chunk.len() == 2 {
+                    let combined = format!("{}{}", chunk[0], chunk[1]);
+                    let parent_hash = Self::hash(&combined);
+                    next_level.push(parent_hash);
+                } else {
+                    next_level.push(chunk[0].clone());
+                }
+            }
+            
+            // Only push internal nodes to self.nodes, not the leaves
+            if next_level.len() > 0 {  // Only add non-leaf levels
+                self.nodes.push(next_level.clone());
+            }
+            current_level = next_level;
         }
     }
 
-    fn verify_proof(&self, proof: &MerkleProof) -> bool {
-        if self.leaves.is_empty() {
-            return false;
+    fn generate_proof(&self, leaf_value: &str) -> Option<MerkleProof> {
+        let leaf_hash = Self::hash(leaf_value);
+        let mut leaf_index = self.leaves.iter().position(|x| x == &leaf_hash)?;
+        let mut proof_path = Vec::new();
+        
+        // Start with leaf level
+        let mut current_level = &self.leaves;
+        
+        // Traverse up through all internal node levels
+        for level in &self.nodes {
+            let sibling_idx = if leaf_index % 2 == 0 {
+                leaf_index + 1
+            } else {
+                leaf_index - 1
+            };
+            
+            // Only add to proof path if sibling exists
+            if sibling_idx < current_level.len() {
+                proof_path.push((current_level[sibling_idx].clone(), leaf_index % 2 == 0));
+            }
+            
+            // Update index for next level up
+            leaf_index /= 2;
+            current_level = level;
         }
+    
+        Some(MerkleProof {
+            leaf_value: leaf_value.to_string(),
+            proof_path,
+        })
+    }
 
+    fn verify_proof(&self, proof: &MerkleProof) -> bool {
         let mut current_hash = Self::hash(&proof.leaf_value);
 
         for (sibling_hash, is_right) in &proof.proof_path {
@@ -88,21 +112,6 @@ impl MerkleTree {
             .cloned()
             .or_else(|| self.leaves.first().cloned())
     }
-
-    fn verify_external_proof(&self, proof: &MerkleProof, expected_root: &str) -> bool {
-        let mut current_hash = Self::hash(&proof.leaf_value);
-
-        for (sibling_hash, is_right) in &proof.proof_path {
-            let combined = if *is_right {
-                format!("{}{}", current_hash, sibling_hash)
-            } else {
-                format!("{}{}", sibling_hash, current_hash)
-            };
-            current_hash = Self::hash(&combined);
-        }
-
-        current_hash == expected_root
-    }
 }
 
 #[derive(Deserialize)]
@@ -118,28 +127,35 @@ struct Output {
     root: Option<String>,
     proof: Option<MerkleProof>,
     verified: Option<bool>,
-    visualization: Option<TreeVisualization>,
     receipt: Option<String>,
 }
 
 fn main() {
     let input: Input = env::read();
-    let tree = MerkleTree::new();
+    let mut tree = MerkleTree::new();
     
     let output = match input.operation.as_str() {
-        "verify" => {
-            let verified = match (input.proof, input.data.first()) {
-                (Some(proof), Some(expected_root)) => {
-                    Some(MerkleTree::verify_external_proof(&tree, &proof, expected_root))
-                },
-                _ => None
-            };
-            
+        "prove" => {
+            for item in input.data {
+                tree.insert(item);
+            }
+            let proof = input.proof_request.and_then(|value| tree.generate_proof(&value));
             Output {
-                root: input.data.first().cloned(),
+                root: tree.get_root(),
+                proof,
+                verified: None,
+                receipt: None,
+            }
+        },
+        "verify" => {
+            for item in input.data {
+                tree.insert(item);
+            }
+            let verified = input.proof.map(|proof| tree.verify_proof(&proof));
+            Output {
+                root: tree.get_root(),
                 proof: None,
                 verified,
-                visualization: None,
                 receipt: None,
             }
         },
@@ -147,7 +163,6 @@ fn main() {
             root: None,
             proof: None,
             verified: None,
-            visualization: None,
             receipt: None
         },
     };

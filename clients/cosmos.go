@@ -111,6 +111,6 @@ func (cqc *CosmosQueryClient) ListMerkleTreeIds() ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal tree data: %v", err)
 	}
-
+	fmt.Printf("Found ids: %v", treeIds)
 	return treeIds, nil
 }

@@ -14,7 +14,7 @@ func PostRequest[T any, R any](url string, requestData T) (*R, error) {
 
 	// Set default headers, timeout
 	client.
-		SetTimeout(time.Second*10).
+		SetTimeout(time.Second*100).
 		SetHeader("Authorization", "Bearer your-token-here")
 
 	// Make request
