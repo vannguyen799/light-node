@@ -1,0 +1,11 @@
+protocol-id: "lEdge"
+
+layer-edge-cosmos:
+  chainId: "layeredgechain"
+  rpcEndpoint: "http://34.31.74.109:26657/"
+  grpcEndpoint: "34.31.74.109:9090"
+  accountPrefix: "cosmos"
+  merkleTreeStorageContract: "cosmos1ufs3tlq4umljk0qfe8k5ya0x6hpavn897u2cnf9k0en9jr7qarqqt56709"
+
+zk-computation-node:
+  node-url: "http://34.57.83.179:3000"

@@ -11,11 +11,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-const (
-	grpcURL      = "34.31.74.109:9090"                                                 // Replace with your gRPC endpoint
-	contractAddr = "cosmos1ufs3tlq4umljk0qfe8k5ya0x6hpavn897u2cnf9k0en9jr7qarqqt56709" // Replace with your contract address
-)
-
 type MerkleTree struct {
 	Root     string   `json:"root"`
 	Leaves   []string `json:"leaves"`
@@ -34,19 +29,21 @@ type QueryListTreeIDs struct {
 }
 
 type CosmosQueryClient struct {
-	conn        *grpc.ClientConn
-	queryClient wasmtypes.QueryClient
+	conn            *grpc.ClientConn
+	queryClient     wasmtypes.QueryClient
+	contractAddress string
 }
 
-func (cqc *CosmosQueryClient) Init() error {
+func (cqc *CosmosQueryClient) Init(grpc_url string, contract_address string) error {
 	// Connect to gRPC client
-	conn, err := grpc.NewClient(grpcURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(grpc_url, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return fmt.Errorf("failed to connect to gRPC: %v", err)
 	}
 
 	cqc.conn = conn
 	cqc.queryClient = wasmtypes.NewQueryClient(conn)
+	cqc.contractAddress = contract_address
 	return nil
 }
 
@@ -68,7 +65,7 @@ func (cqc *CosmosQueryClient) GetMerkleTreeData(id string) (*MerkleTree, error) 
 	res, err := cqc.queryClient.SmartContractState(
 		context.Background(),
 		&wasmtypes.QuerySmartContractStateRequest{
-			Address:   contractAddr,
+			Address:   cqc.contractAddress,
 			QueryData: queryBytes,
 		},
 	)
@@ -97,7 +94,7 @@ func (cqc *CosmosQueryClient) ListMerkleTreeIds() ([]string, error) {
 	res, err := cqc.queryClient.SmartContractState(
 		context.Background(),
 		&wasmtypes.QuerySmartContractStateRequest{
-			Address:   contractAddr,
+			Address:   cqc.contractAddress,
 			QueryData: queryBytes,
 		},
 	)

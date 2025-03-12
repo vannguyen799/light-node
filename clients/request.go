@@ -9,19 +9,27 @@ import (
 	"github.com/go-resty/resty/v2"
 )
 
-func PostRequest[T any, R any](url string, requestData T) (*R, error) {
-	client := resty.New()
+type ZKRequestClient struct {
+	client  *resty.Client
+	NodeUrl string
+}
 
+func (zkrc *ZKRequestClient) Init(node_url string) {
+	zkrc.client = resty.New()
+	zkrc.client.BaseURL = node_url
+}
+
+func PostRequest[T any, R any](zkrc *ZKRequestClient, requestData T) (*R, error) {
 	// Set default headers, timeout
-	client.
+	zkrc.client.
 		SetTimeout(time.Second*10).
 		SetHeader("Authorization", "Bearer your-token-here")
 
 	// Make request
-	resp, err := client.R().
+	resp, err := zkrc.client.R().
 		SetHeader("Content-Type", "application/json").
 		SetBody(requestData).
-		Post(url)
+		Post(fmt.Sprintf("%s/process", zkrc.NodeUrl))
 
 	if err != nil {
 		return nil, fmt.Errorf("error making request: %v", err)

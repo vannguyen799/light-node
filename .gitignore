@@ -24,6 +24,9 @@ go.work
 *.swo
 .DS_Store
 
+# YML config files
+*-config.yml
+
 # Environment variables
 .env
 .env.local

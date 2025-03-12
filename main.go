@@ -9,8 +9,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Layer-Edge/light-node/config"
 	"github.com/Layer-Edge/light-node/node"
 )
+
+var cfg = config.GetConfig()
 
 func Worker(ctx context.Context, wg *sync.WaitGroup, id int) {
 	defer wg.Done()
@@ -21,7 +24,7 @@ func Worker(ctx context.Context, wg *sync.WaitGroup, id int) {
 			return
 		default:
 			fmt.Printf("Worker %d is running...\n", id)
-			node.CollectSampleAndVerify()
+			node.CollectSampleAndVerify(&cfg)
 			time.Sleep(5 * time.Second)
 		}
 	}
