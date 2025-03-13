@@ -6,6 +6,14 @@ import (
 )
 
 func RandomSample[T any](arr []T, n int) []T {
+	if len(arr) == 0 {
+		return []T{}
+	}
+
+	if n > len(arr) {
+		n = len(arr)
+	}
+	
 	if n > len(arr) {
 		n = len(arr)
 	}
@@ -20,7 +28,11 @@ func RandomSample[T any](arr []T, n int) []T {
 	return shuffled[:n]
 }
 
-func RandomElement[T any](arr []T) T {
+func RandomElement[T any](arr []T) (result T) {
+	if len(arr) == 0 {
+		return result
+	}
+
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	randomIndex := r.Intn(len(arr))
 	return arr[randomIndex]
