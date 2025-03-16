@@ -5,16 +5,49 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-const (
-	grpcURL      = "34.31.74.109:9090"                                                 // Replace with your gRPC endpoint
-	contractAddr = "cosmos1ufs3tlq4umljk0qfe8k5ya0x6hpavn897u2cnf9k0en9jr7qarqqt56709" // Replace with your contract address
-)
+// ClientConfig holds all configurable parameters for the clients package
+type ClientConfig struct {
+	GrpcURL      string
+	ContractAddr string
+}
+
+// Global configuration with default values
+var globalClientConfig = ClientConfig{
+	GrpcURL:      "34.31.74.109:9090",                                                 // Default gRPC endpoint
+	ContractAddr: "cosmos1ufs3tlq4umljk0qfe8k5ya0x6hpavn897u2cnf9k0en9jr7qarqqt56709", // Default contract address
+}
+
+// InitClientConfig initializes the client configuration with environment variables or defaults
+func InitClientConfig() {
+	if value, exists := os.LookupEnv("GRPC_URL"); exists {
+		globalClientConfig.GrpcURL = value
+	}
+	if value, exists := os.LookupEnv("CONTRACT_ADDR"); exists {
+		globalClientConfig.ContractAddr = value
+	}
+
+	log.Printf("Initialized client configuration: GRPC_URL=%s, CONTRACT_ADDR=%s",
+		globalClientConfig.GrpcURL, globalClientConfig.ContractAddr)
+}
+
+// SetClientConfig allows overriding the configuration programmatically
+func SetClientConfig(config ClientConfig) {
+	globalClientConfig = config
+	log.Printf("Updated client configuration: GRPC_URL=%s, CONTRACT_ADDR=%s",
+		globalClientConfig.GrpcURL, globalClientConfig.ContractAddr)
+}
+
+// GetClientConfig returns a copy of the current configuration
+func GetClientConfig() ClientConfig {
+	return globalClientConfig
+}
 
 type MerkleTree struct {
 	Root     string   `json:"root"`
@@ -36,13 +69,32 @@ type QueryListTreeIDs struct {
 type CosmosQueryClient struct {
 	conn        *grpc.ClientConn
 	queryClient wasmtypes.QueryClient
+	config      ClientConfig
 }
 
 func (cqc *CosmosQueryClient) Init() error {
+	// Use the global configuration
+	cqc.config = globalClientConfig
+
 	// Connect to gRPC client
-	conn, err := grpc.NewClient(grpcURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial(cqc.config.GrpcURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		return fmt.Errorf("failed to connect to gRPC: %v", err)
+		return fmt.Errorf("failed to connect to gRPC at %s: %v", cqc.config.GrpcURL, err)
+	}
+
+	cqc.conn = conn
+	cqc.queryClient = wasmtypes.NewQueryClient(conn)
+	return nil
+}
+
+// InitWithConfig initializes the client with a specific configuration
+func (cqc *CosmosQueryClient) InitWithConfig(config ClientConfig) error {
+	cqc.config = config
+
+	// Connect to gRPC client
+	conn, err := grpc.Dial(cqc.config.GrpcURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return fmt.Errorf("failed to connect to gRPC at %s: %v", cqc.config.GrpcURL, err)
 	}
 
 	cqc.conn = conn
@@ -62,13 +114,13 @@ func (cqc *CosmosQueryClient) GetMerkleTreeData(id string) (*MerkleTree, error) 
 
 	queryBytes, err := json.Marshal(query)
 	if err != nil {
-		log.Fatalf("Failed to marshal query: %v", err)
+		return nil, fmt.Errorf("failed to marshal query: %v", err)
 	}
 
 	res, err := cqc.queryClient.SmartContractState(
 		context.Background(),
 		&wasmtypes.QuerySmartContractStateRequest{
-			Address:   contractAddr,
+			Address:   cqc.config.ContractAddr,
 			QueryData: queryBytes,
 		},
 	)
@@ -91,13 +143,13 @@ func (cqc *CosmosQueryClient) ListMerkleTreeIds() ([]string, error) {
 
 	queryBytes, err := json.Marshal(query)
 	if err != nil {
-		log.Fatalf("Failed to marshal query: %v", err)
+		return nil, fmt.Errorf("failed to marshal query: %v", err)
 	}
 
 	res, err := cqc.queryClient.SmartContractState(
 		context.Background(),
 		&wasmtypes.QuerySmartContractStateRequest{
-			Address:   contractAddr,
+			Address:   cqc.config.ContractAddr,
 			QueryData: queryBytes,
 		},
 	)
@@ -111,6 +163,5 @@ func (cqc *CosmosQueryClient) ListMerkleTreeIds() ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal tree data: %v", err)
 	}
-
 	return treeIds, nil
 }

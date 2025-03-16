@@ -9,12 +9,14 @@ import (
 	"github.com/go-resty/resty/v2"
 )
 
+const TIMEOUT = 100
+
 func PostRequest[T any, R any](url string, requestData T) (*R, error) {
 	client := resty.New()
 
 	// Set default headers, timeout
 	client.
-		SetTimeout(time.Second*10).
+		SetTimeout(time.Second*TIMEOUT).
 		SetHeader("Authorization", "Bearer your-token-here")
 
 	// Make request
