@@ -17,6 +17,11 @@ Key features:
 
 - Go 1.18 or higher
 - Access to a Layer Edge gRPC endpoint
+- The 'risc0' toolchain could not be found.
+  To install the risc0 toolchain, use rzup.
+  For example:
+    curl -L https://risczero.com/install | bash
+    rzup install
 
 ### Build Instructions
 
