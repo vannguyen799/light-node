@@ -80,7 +80,8 @@ async fn process(req: web::Json<Request>) -> HttpResponse {
                 ProcessError(e.to_string())
             })?;
         
-        output.receipt = format!("{}", format!("{:?}", receipt).len()).into();
+            let journal_hex = hex::encode(&receipt.journal.bytes);
+            output.receipt = Some(journal_hex);
         
         Ok::<Response, ProcessError>(output)
     })
