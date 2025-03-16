@@ -3,6 +3,7 @@ package node
 import (
 	"fmt"
 	"log"
+	"os"
 	"sync"
 	"time"
 
@@ -38,9 +39,9 @@ type Proof struct {
 
 // TreeState stores the state of each merkle tree
 type TreeState struct {
-	LastRoot      string    // Last known root hash
-	SleepUntil    time.Time // Time until which the tree should sleep
-	ConsecutiveSame int     // Counter for consecutive same root occurrences
+	LastRoot        string    // Last known root hash
+	SleepUntil      time.Time // Time until which the tree should sleep
+	ConsecutiveSame int       // Counter for consecutive same root occurrences
 }
 
 type SubmitProofRequest struct {
@@ -52,6 +53,15 @@ type SubmitProofRequest struct {
 	Receipt       string `json:"receipt"`
 }
 
+func getEnv(key, defaultValue string) string {
+	if value, exists := os.LookupEnv(key); exists {
+		return value
+	}
+	return defaultValue
+}
+
+var zkProverURL = getEnv("ZK_PROVER_URL", "http://127.0.0.1:3001")
+
 // Global map to track tree states with mutex for thread safety
 var (
 	treeStates = make(map[string]*TreeState)
@@ -59,7 +69,7 @@ var (
 )
 
 func proveProof(data []string, proof_request string) (*Proof, error) {
-	resp, err := clients.PostRequest[ZKProverPayload, ZKProverResponse]("http://127.0.0.1:3001/process", ZKProverPayload{
+	resp, err := clients.PostRequest[ZKProverPayload, ZKProverResponse](zkProverURL+"/process", ZKProverPayload{
 		Operation:    "prove",
 		Data:         data,
 		ProofRequest: &proof_request,
@@ -73,7 +83,7 @@ func proveProof(data []string, proof_request string) (*Proof, error) {
 }
 
 func verifyProofs(data []string, proof Proof) (*string, *string, error) {
-	resp, err := clients.PostRequest[ZKProverPayload, ZKProverResponse]("http://127.0.0.1:3001/process", ZKProverPayload{
+	resp, err := clients.PostRequest[ZKProverPayload, ZKProverResponse](zkProverURL+"/process", ZKProverPayload{
 		Operation:    "verify",
 		Data:         data,
 		ProofRequest: nil,
@@ -129,19 +139,19 @@ func CollectSampleAndVerify() {
 		if !exists {
 			// First time seeing this tree
 			treeStates[treeId] = &TreeState{
-				LastRoot:      tree.Root,
+				LastRoot:        tree.Root,
 				ConsecutiveSame: 0,
 			}
 			stateMutex.Unlock()
 		} else if state.LastRoot == tree.Root {
 			// Root hasn't changed - increment counter and potentially sleep
 			state.ConsecutiveSame++
-			
+
 			if state.ConsecutiveSame >= 3 {
 				// After 3 consecutive same roots, put the tree to sleep for 5 minutes
 				sleepDuration := 5 * time.Minute
 				state.SleepUntil = time.Now().Add(sleepDuration)
-				log.Printf("Tree %s has had the same root %s for %d checks, putting to sleep for %v", 
+				log.Printf("Tree %s has had the same root %s for %d checks, putting to sleep for %v",
 					treeId, tree.Root, state.ConsecutiveSame, sleepDuration)
 				stateMutex.Unlock()
 				continue
@@ -172,7 +182,7 @@ func CollectSampleAndVerify() {
 		if receipt != nil {
 			walletAddress := "YOUR_WALLET_ADDRESS" // Replace with actual wallet address
 			signature := "YOUR_SIGNATURE"          // Replace with signature created for this proof
-			
+
 			err = SubmitVerifiedProof(walletAddress, signature, *proof, *receipt)
 			if err != nil {
 				log.Printf("Failed to submit verified proof: %v", err)
@@ -207,48 +217,48 @@ func CollectSampleAndVerify() {
 func GetSleepingTrees() []string {
 	stateMutex.Lock()
 	defer stateMutex.Unlock()
-	
+
 	var sleepingTrees []string
 	now := time.Now()
-	
+
 	for treeId, state := range treeStates {
 		if now.Before(state.SleepUntil) {
 			sleepingTrees = append(sleepingTrees, treeId)
 		}
 	}
-	
+
 	return sleepingTrees
 }
 
 func SubmitVerifiedProof(walletAddress string, signature string, proof Proof, receipt string) error {
-    // Create the timestamp (current time in milliseconds)
-    timestamp := fmt.Sprintf("%d", time.Now().UnixMilli())
-    
-    // Create the proof hash (this appears to be required by the API)
-    // Note: You may need to adjust how proofHash is calculated based on your requirements
-    proofHash := utils.HashString(proof.LeafValue) // Assuming utils.HashString exists    
-    
-    requestBody := SubmitProofRequest{
-        WalletAddress: walletAddress,
-        Sign:          signature,
-        Timestamp:     timestamp,
-        Proof:         proof,
-        ProofHash:     proofHash,
-        Receipt:       receipt,
-    }
-    
-    // Make the API request
-    // You may need to adjust the URL based on your environment
-    baseUrl := "http://localhost:3001" // Replace with your actual API URL
-    resp, err := clients.PostRequest[SubmitProofRequest, map[string]interface{}](
-        baseUrl + "/submit-verified-proof", 
-        requestBody,
-    )
-    
-    if err != nil {
-        return fmt.Errorf("failed to submit verified proof: %v", err)
-    }
-    
-    log.Printf("Proof submission result: %v", resp)
-    return nil
+	// Create the timestamp (current time in milliseconds)
+	timestamp := fmt.Sprintf("%d", time.Now().UnixMilli())
+
+	// Create the proof hash (this appears to be required by the API)
+	// Note: You may need to adjust how proofHash is calculated based on your requirements
+	proofHash := utils.HashString(proof.LeafValue) // Assuming utils.HashString exists
+
+	requestBody := SubmitProofRequest{
+		WalletAddress: walletAddress,
+		Sign:          signature,
+		Timestamp:     timestamp,
+		Proof:         proof,
+		ProofHash:     proofHash,
+		Receipt:       receipt,
+	}
+
+	// Make the API request
+	// You may need to adjust the URL based on your environment
+	baseUrl := "http://localhost:3001" // Replace with your actual API URL
+	resp, err := clients.PostRequest[SubmitProofRequest, map[string]interface{}](
+		baseUrl+"/submit-verified-proof",
+		requestBody,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to submit verified proof: %v", err)
+	}
+
+	log.Printf("Proof submission result: %v", resp)
+	return nil
 }
