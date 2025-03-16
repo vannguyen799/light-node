@@ -33,6 +33,11 @@ if ! command -v go &> /dev/null; then
   error "Go is not installed. Please install Go before running this script."
 fi
 
+# Check if risc0 toolchain is installed
+if ! command -v rzup &> /dev/null; then
+  error "The 'risc0' toolchain could not be found. Install it using: curl -L https://risczero.com/install | bash && rzup install"
+fi
+
 # Start ZK prover service
 log "Starting ZK prover service..."
 cd "$ZK_PROVER_DIR" || error "Failed to navigate to ZK prover directory"
