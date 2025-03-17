@@ -3,7 +3,6 @@ package node
 import (
 	"fmt"
 	"log"
-	"os"
 	"sync"
 	"time"
 
@@ -53,14 +52,8 @@ type SubmitProofRequest struct {
 	Receipt       string `json:"receipt"`
 }
 
-func getEnv(key, defaultValue string) string {
-	if value, exists := os.LookupEnv(key); exists {
-		return value
-	}
-	return defaultValue
-}
-
-var zkProverURL = getEnv("ZK_PROVER_URL", "http://127.0.0.1:3001")
+var zkProverURL = utils.GetEnv("ZK_PROVER_URL", "http://127.0.0.1:3001")
+var lightNodePointsAPI = utils.GetEnv("POINTS_API", "http://127.0.0.1:3001")
 
 // Global map to track tree states with mutex for thread safety
 var (
@@ -180,10 +173,18 @@ func CollectSampleAndVerify() {
 		}
 
 		if receipt != nil {
-			walletAddress := "YOUR_WALLET_ADDRESS" // Replace with actual wallet address
-			signature := "YOUR_SIGNATURE"          // Replace with signature created for this proof
+			walletAddress, err := utils.GetWalletAddress()
+			if err != nil {
+				log.Fatalf("failed to get wallet address from private key: %v", err)
+			}
 
-			err = SubmitVerifiedProof(walletAddress, signature, *proof, *receipt)
+			timestamp := fmt.Sprintf("%d", time.Now().UnixMilli())
+			signature, err := utils.SignMessage(fmt.Sprintf("Submitting proof verification by %v of %v at %v", *walletAddress, *proof, timestamp))
+			if err != nil {
+				log.Fatalf("failed to sign message: %v", err)
+			}
+
+			err = SubmitVerifiedProof(*walletAddress, *signature, *proof, *receipt, timestamp)
 			if err != nil {
 				log.Printf("Failed to submit verified proof: %v", err)
 			} else {
@@ -230,10 +231,7 @@ func GetSleepingTrees() []string {
 	return sleepingTrees
 }
 
-func SubmitVerifiedProof(walletAddress string, signature string, proof Proof, receipt string) error {
-	// Create the timestamp (current time in milliseconds)
-	timestamp := fmt.Sprintf("%d", time.Now().UnixMilli())
-
+func SubmitVerifiedProof(walletAddress string, signature string, proof Proof, receipt string, timestamp string) error {
 	// Create the proof hash (this appears to be required by the API)
 	// Note: You may need to adjust how proofHash is calculated based on your requirements
 	proofHash := utils.HashString(proof.LeafValue) // Assuming utils.HashString exists
@@ -249,9 +247,8 @@ func SubmitVerifiedProof(walletAddress string, signature string, proof Proof, re
 
 	// Make the API request
 	// You may need to adjust the URL based on your environment
-	baseUrl := "http://localhost:3001" // Replace with your actual API URL
 	resp, err := clients.PostRequest[SubmitProofRequest, map[string]interface{}](
-		baseUrl+"/submit-verified-proof",
+		lightNodePointsAPI+"/submit-verified-proof",
 		requestBody,
 	)
 
