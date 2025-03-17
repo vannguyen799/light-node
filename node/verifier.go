@@ -180,7 +180,9 @@ func CollectSampleAndVerify() {
 			}
 
 			timestamp := fmt.Sprintf("%d", time.Now().UnixMilli())
-			signature, err := utils.SignMessage(fmt.Sprintf("Submitting proof verification by %v of %v at %v", *walletAddress, proof.LeafValue, timestamp))
+			msg := fmt.Sprintf("Submitting proof verification by %s of %s at %s", *walletAddress, proof.LeafValue, timestamp)
+			fmt.Printf("Signing Message %s", msg)
+			signature, err := utils.SignMessage(msg)
 			if err != nil {
 				log.Fatalf("failed to sign message: %v", err)
 			}
