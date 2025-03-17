@@ -25,7 +25,6 @@ func GetWalletAddress() (*string, error) {
 func SignMessage(message string) (*string, error) {
 	privKey := GetEnv("PRIVATE_KEY", "")
 
-	log.Printf("Private key: %s", privKey)
 	privateKey, err := crypto.HexToECDSA(privKey)
 	if err != nil {
 		return nil, err
