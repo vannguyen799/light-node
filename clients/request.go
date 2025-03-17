@@ -4,19 +4,30 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/go-resty/resty/v2"
 )
 
-const TIMEOUT = 100
+// Default timeout in seconds if environment variable is not set
+const DEFAULT_TIMEOUT = 100
 
 func PostRequest[T any, R any](url string, requestData T) (*R, error) {
 	client := resty.New()
 
+	// Get timeout from environment variable or use default
+	timeout := DEFAULT_TIMEOUT
+	if envTimeout, exists := os.LookupEnv("API_REQUEST_TIMEOUT"); exists {
+		if t, err := strconv.Atoi(envTimeout); err == nil {
+			timeout = t
+		}
+	}
+
 	// Set default headers, timeout
 	client.
-		SetTimeout(time.Second*TIMEOUT).
+		SetTimeout(time.Second*time.Duration(timeout)).
 		SetHeader("Authorization", "Bearer your-token-here")
 
 	// Make request
