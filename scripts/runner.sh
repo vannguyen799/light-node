@@ -1,6 +1,6 @@
 #!/bin/bash
 # run-all.sh
-# This script runs both the ZK prover service and the light node client
+# This script builds and runs both the ZK prover service and the light node client
 
 # Color codes
 BLUE='\033[0;34m'
@@ -22,8 +22,10 @@ success() {
   echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] $1${NC}"
 }
 
-# Ensure scripts are executable
+# Ensure all scripts are executable
+chmod +x build-risc0-service.sh
 chmod +x start-risc0-service.sh
+chmod +x build-light-node.sh
 chmod +x start-light-node.sh
 
 # Handle exit - cleanup
@@ -44,20 +46,30 @@ cleanup() {
 # Set trap to catch script termination
 trap cleanup EXIT INT TERM
 
+# Build RISC0 Merkle Service
+log "Building RISC0 Merkle Service..."
+./build-risc0-service.sh
+if [ $? -ne 0 ]; then
+  error "Failed to build RISC0 Merkle Service"
+fi
+
+# Build Light Node
+log "Building Light Node Client..."
+./build-light-node.sh
+if [ $? -ne 0 ]; then
+  error "Failed to build Light Node Client"
+fi
+
 # Start RISC0 Merkle Service
 log "Starting RISC0 Merkle Service..."
-scripts/risczero-runner.sh
-
-# Check exit status
+./start-risc0-service.sh
 if [ $? -ne 0 ]; then
   error "Failed to start RISC0 Merkle Service"
 fi
 
 # Start Light Node
 log "Starting Light Node Client..."
-scripts/light-node-runner.sh
-
-# Note: We don't need to check exit status here as the script will end
+./start-light-node.sh
 
 success "All services have been shut down"
 exit 0

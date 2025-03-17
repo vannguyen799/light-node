@@ -1,6 +1,6 @@
 #!/bin/bash
 # start-light-node.sh
-# This script builds and runs the light node client
+# This script runs the light node client (assumes it's already built)
 
 # Configuration
 LIGHT_NODE_DIR="."
@@ -40,16 +40,10 @@ if ! ps -p "$ZK_PROVER_PID" > /dev/null; then
   error "ZK prover is not running. Please start it using start-risc0-service.sh."
 fi
 
-# Check if Go is installed
-if ! command -v go &> /dev/null; then
-  error "Go is not installed. Please install Go before running this script."
+# Check if the light node binary exists
+if [ ! -f "$LIGHT_NODE_BIN" ]; then
+  error "Light node binary not found. Please build it first with build-light-node.sh."
 fi
-
-# Build light node
-log "Building light node..."
-cd "$LIGHT_NODE_DIR" || error "Failed to navigate to light node directory"
-go build -o "$LIGHT_NODE_BIN" || error "Failed to build light node"
-success "Light node built successfully"
 
 # Run light node
 success "Starting light node..."
