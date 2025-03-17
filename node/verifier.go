@@ -50,7 +50,7 @@ type SubmitProofRequest struct {
 	Proof         string `json:"proof"`
 	ProofHash     string `json:"proofHash"`
 	Receipt       string `json:"receipt"`
-	PublicKey     string `json:publicKey`
+	PublicKey     string `json:"publicKey"`
 }
 
 var zkProverURL = utils.GetEnv("ZK_PROVER_URL", "http://127.0.0.1:3001")
@@ -181,7 +181,7 @@ func CollectSampleAndVerify() {
 
 			timestamp := fmt.Sprintf("%d", time.Now().UnixMilli())
 			msg := fmt.Sprintf("Submitting proof verification by %s of %s at %s", *walletAddress, proof.LeafValue, timestamp)
-			fmt.Printf("Signing Message %s", msg)
+			fmt.Printf("Signing Message %s\n", msg)
 			signature, err := utils.SignMessage(msg)
 			if err != nil {
 				log.Fatalf("failed to sign message: %v", err)
