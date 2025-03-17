@@ -6,6 +6,7 @@ require (
 	github.com/CosmWasm/wasmd v0.54.0
 	github.com/ethereum/go-ethereum v1.15.5
 	github.com/go-resty/resty/v2 v2.16.5
+	github.com/joho/godotenv v1.5.1
 	google.golang.org/grpc v1.67.1
 )
 
