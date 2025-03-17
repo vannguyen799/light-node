@@ -44,12 +44,13 @@ type TreeState struct {
 }
 
 type SubmitProofRequest struct {
-	WalletAddress string `json:"wallet_address"`
+	WalletAddress string `json:"walletAddress"`
 	Sign          string `json:"sign"`
 	Timestamp     string `json:"timestamp"`
 	Proof         Proof  `json:"proof"`
 	ProofHash     string `json:"proofHash"`
 	Receipt       string `json:"receipt"`
+	PublicKey     string `json:publicKey`
 }
 
 var zkProverURL = utils.GetEnv("ZK_PROVER_URL", "http://127.0.0.1:3001")
@@ -232,6 +233,7 @@ func GetSleepingTrees() []string {
 }
 
 func SubmitVerifiedProof(walletAddress string, signature string, proof Proof, receipt string, timestamp string) error {
+	publicKey := utils.GetEnv("PUBLIC_KEY", "")
 	// Create the proof hash (this appears to be required by the API)
 	// Note: You may need to adjust how proofHash is calculated based on your requirements
 	proofHash := utils.HashString(proof.LeafValue) // Assuming utils.HashString exists
@@ -243,12 +245,13 @@ func SubmitVerifiedProof(walletAddress string, signature string, proof Proof, re
 		Proof:         proof,
 		ProofHash:     proofHash,
 		Receipt:       receipt,
+		PublicKey:     publicKey,
 	}
 
 	// Make the API request
 	// You may need to adjust the URL based on your environment
 	resp, err := clients.PostRequest[SubmitProofRequest, map[string]interface{}](
-		lightNodePointsAPI+"/submit-verified-proof",
+		lightNodePointsAPI+"/api/cli-node/submit-verified-proof",
 		requestBody,
 	)
 
