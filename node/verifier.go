@@ -47,7 +47,7 @@ type SubmitProofRequest struct {
 	WalletAddress string `json:"walletAddress"`
 	Sign          string `json:"sign"`
 	Timestamp     string `json:"timestamp"`
-	Proof         Proof  `json:"proof"`
+	Proof         string `json:"proof"`
 	ProofHash     string `json:"proofHash"`
 	Receipt       string `json:"receipt"`
 	PublicKey     string `json:publicKey`
@@ -180,7 +180,7 @@ func CollectSampleAndVerify() {
 			}
 
 			timestamp := fmt.Sprintf("%d", time.Now().UnixMilli())
-			signature, err := utils.SignMessage(fmt.Sprintf("Submitting proof verification by %v of %v at %v", *walletAddress, *proof, timestamp))
+			signature, err := utils.SignMessage(fmt.Sprintf("Submitting proof verification by %v of %v at %v", *walletAddress, proof.LeafValue, timestamp))
 			if err != nil {
 				log.Fatalf("failed to sign message: %v", err)
 			}
@@ -242,7 +242,7 @@ func SubmitVerifiedProof(walletAddress string, signature string, proof Proof, re
 		WalletAddress: walletAddress,
 		Sign:          signature,
 		Timestamp:     timestamp,
-		Proof:         proof,
+		Proof:         proof.LeafValue,
 		ProofHash:     proofHash,
 		Receipt:       receipt,
 		PublicKey:     publicKey,
