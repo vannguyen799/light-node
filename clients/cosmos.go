@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
+	"github.com/Layer-Edge/light-node/utils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -26,12 +26,8 @@ var globalClientConfig = ClientConfig{
 
 // InitClientConfig initializes the client configuration with environment variables or defaults
 func InitClientConfig() {
-	if value, exists := os.LookupEnv("GRPC_URL"); exists {
-		globalClientConfig.GrpcURL = value
-	}
-	if value, exists := os.LookupEnv("CONTRACT_ADDR"); exists {
-		globalClientConfig.ContractAddr = value
-	}
+	globalClientConfig.GrpcURL = utils.GetEnv("GRPC_URL", "0.0.0.0:9090")
+	globalClientConfig.ContractAddr = utils.GetEnv("CONTRACT_ADDR", "cosmos1ufs3tlq4umljk0qfe8k5ya0x6hpavn897u2cnf9k0en9jr7qarqqt56709")
 
 	log.Printf("Initialized client configuration: GRPC_URL=%s, CONTRACT_ADDR=%s",
 		globalClientConfig.GrpcURL, globalClientConfig.ContractAddr)

@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
 
+	"github.com/Layer-Edge/light-node/utils"
 	"github.com/go-resty/resty/v2"
 )
 
@@ -19,10 +19,9 @@ func PostRequest[T any, R any](url string, requestData T) (*R, error) {
 
 	// Get timeout from environment variable or use default
 	timeout := DEFAULT_TIMEOUT
-	if envTimeout, exists := os.LookupEnv("API_REQUEST_TIMEOUT"); exists {
-		if t, err := strconv.Atoi(envTimeout); err == nil {
-			timeout = t
-		}
+	envTimeout := utils.GetEnv("API_REQUEST_TIMEOUT", "100")
+	if t, err := strconv.Atoi(envTimeout); err == nil {
+		timeout = t
 	}
 
 	// Set default headers, timeout
