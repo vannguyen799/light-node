@@ -8,6 +8,7 @@ import (
 
 	"github.com/Layer-Edge/light-node/clients"
 	"github.com/Layer-Edge/light-node/utils"
+	"github.com/joho/godotenv"
 )
 
 type ZKProverPayload struct {
@@ -91,8 +92,13 @@ func verifyProofs(data []string, proof Proof) (*string, *string, error) {
 }
 
 func CollectSampleAndVerify() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("Warning: .env file not loaded in processor")
+	}
+
 	cosmosQueryClient := clients.CosmosQueryClient{}
-	err := cosmosQueryClient.Init()
+	err = cosmosQueryClient.Init()
 	if err != nil {
 		log.Fatalf("failed to initialize cosmos query client: %v", err)
 	}
