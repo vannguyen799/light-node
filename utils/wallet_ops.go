@@ -30,20 +30,24 @@ func SignMessage(message string) (*string, error) {
 		return nil, err
 	}
 
-	data := []byte(message)
+	prefix := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(message), message)
+
+	data := []byte(prefix)
 	hash := crypto.Keccak256Hash(data)
 
 	signature, err := crypto.Sign(hash.Bytes(), privateKey)
 	if err != nil {
 		return nil, err
 	}
+	signature[64] += 27
 
 	hexSign := hexutil.Encode(signature)
 	return &hexSign, nil
 }
 
 func VerifyMessage(sign string, message string, expectedAddress string) error {
-	messageHash := crypto.Keccak256Hash([]byte(message))
+	prefix := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(message), message)
+	messageHash := crypto.Keccak256Hash([]byte(prefix))
 	signature, err := hexutil.Decode(sign)
 	if err != nil {
 		log.Printf("invalid signature")
@@ -54,7 +58,7 @@ func VerifyMessage(sign string, message string, expectedAddress string) error {
 		return fmt.Errorf("invalid signature length")
 	}
 
-	// signature[64] -= 27
+	signature[64] -= 27
 
 	pubKey, err := crypto.SigToPub(messageHash.Bytes(), signature)
 	if err != nil {
