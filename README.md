@@ -38,11 +38,22 @@ POINTS_API=http://127.0.0.1:8080
 PRIVATE_KEY='cli-node-private-key'
 ```
 
-Grant execute permission and run the script
+Please make sure the ZK Prover URL is the same URL as that of the server where the merkle service is running
+
+## Run both the servers manually
+
 ```bash
-chmod +x scripts/light-node-runner.sh 
-scripts/light-node-runner.sh
+go build
+./light-node
 ```
+
+In a separate terminal (navigate to the merkle service directory and run it):
+```bash
+cd risc0-merkle-service
+cargo build && cargo run
+```
+
+Make sure both the servers are running independently
 
 ## Logging and Monitoring
 
