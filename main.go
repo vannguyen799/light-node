@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"sync"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Layer-Edge/light-node/node"
+	"github.com/joho/godotenv"
 )
 
 func Worker(ctx context.Context, wg *sync.WaitGroup, id int) {
@@ -28,6 +30,11 @@ func Worker(ctx context.Context, wg *sync.WaitGroup, id int) {
 }
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

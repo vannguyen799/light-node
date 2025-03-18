@@ -16,21 +16,26 @@ Key features:
 ### Prerequisites
 
 - Go 1.18 or higher
+- Rust 1.81.0 or higher
 - Access to a Layer Edge gRPC endpoint
 - The 'risc0' toolchain could not be found.
   To install the risc0 toolchain, use rzup.
   For example:
+    ```bash
     curl -L https://risczero.com/install | bash
     rzup install
+    ```
 
 ### Build Instructions
 
-Configure environment variables
+Configure environment variables or in .env file
 ```env
 GRPC_URL=34.31.74.109:9090
 CONTRACT_ADDR=cosmos1ufs3tlq4umljk0qfe8k5ya0x6hpavn897u2cnf9k0en9jr7qarqqt56709
 ZK_PROVER_URL=http://127.0.0.1:3001
 API_REQUEST_TIMEOUT=100
+POINTS_API=http://127.0.0.1:8080
+PRIVATE_KEY='cli-node-private-key'
 ```
 
 Please make sure the ZK Prover URL is the same URL as that of the server where the merkle service is running
