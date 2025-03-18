@@ -50,7 +50,6 @@ type SubmitProofRequest struct {
 	Proof         string `json:"proof"`
 	ProofHash     string `json:"proofHash"`
 	Receipt       string `json:"receipt"`
-	PublicKey     string `json:"publicKey"`
 }
 
 var zkProverURL = utils.GetEnv("ZK_PROVER_URL", "http://127.0.0.1:3001")
@@ -235,7 +234,6 @@ func GetSleepingTrees() []string {
 }
 
 func SubmitVerifiedProof(walletAddress string, signature string, proof Proof, receipt string, timestamp string) error {
-	publicKey := utils.GetEnv("PUBLIC_KEY", "")
 	// Create the proof hash (this appears to be required by the API)
 	// Note: You may need to adjust how proofHash is calculated based on your requirements
 	proofHash := utils.HashString(proof.LeafValue) // Assuming utils.HashString exists
@@ -247,7 +245,6 @@ func SubmitVerifiedProof(walletAddress string, signature string, proof Proof, re
 		Proof:         proof.LeafValue,
 		ProofHash:     proofHash,
 		Receipt:       receipt,
-		PublicKey:     publicKey,
 	}
 
 	// Make the API request
