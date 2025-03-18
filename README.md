@@ -22,8 +22,7 @@ Key features:
   To install the risc0 toolchain, use rzup.
   For example:
     ```bash
-    curl -L https://risczero.com/install | bash
-    rzup install
+    curl -L https://risczero.com/install | bash && rzup install
     ```
 
 ### Build Instructions
@@ -43,14 +42,14 @@ Please make sure the ZK Prover URL is the same URL as that of the server where t
 ## Run both the servers manually
 
 ```bash
-go build
-./light-node
-```
-
-In a separate terminal (navigate to the merkle service directory and run it):
-```bash
 cd risc0-merkle-service
 cargo build && cargo run
+```
+Make sure risc0 server is up first
+In a separate terminal (navigate to the root and run it):
+```bash
+go build
+./light-node
 ```
 
 Make sure both the servers are running independently
