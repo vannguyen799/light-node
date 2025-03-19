@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Layer-Edge/light-node/node"
+	"github.com/Layer-Edge/light-node/utils"
 	"github.com/joho/godotenv"
 )
 
@@ -34,6 +35,12 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
+
+	pubKey, err := utils.GetCompressedPublicKey()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+	log.Printf("Compressed Public Key: %s", pubKey)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
