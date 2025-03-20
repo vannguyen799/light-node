@@ -34,11 +34,14 @@ func main() {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
-	}
+	}	
+
+	log.Println("Starting worker...")
+	
 
 	pubKey, err := utils.GetCompressedPublicKey()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Fatal("Error loading .env file" + err.Error())
 	}
 	log.Printf("Compressed Public Key: %s", pubKey)
 
