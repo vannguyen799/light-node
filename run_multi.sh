@@ -17,7 +17,7 @@ for i in "${!privateKeys[@]}"; do
         POINTS_API=https://light-node.layeredge.io \
         PRIVATE_KEY=$pk \
         ./light-node &
-        
+    sleep 1
 done
 
 wait
