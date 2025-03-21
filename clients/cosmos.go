@@ -20,13 +20,13 @@ type ClientConfig struct {
 
 // Global configuration with default values
 var globalClientConfig = ClientConfig{
-	GrpcURL:      "34.31.74.109:9090",                                                 // Default gRPC endpoint
+	GrpcURL:      "grpc.testnet.layeredge.io:9090",                                    // Default gRPC endpoint
 	ContractAddr: "cosmos1ufs3tlq4umljk0qfe8k5ya0x6hpavn897u2cnf9k0en9jr7qarqqt56709", // Default contract address
 }
 
 // InitClientConfig initializes the client configuration with environment variables or defaults
 func InitClientConfig() {
-	globalClientConfig.GrpcURL = utils.GetEnv("GRPC_URL", "0.0.0.0:9090")
+	globalClientConfig.GrpcURL = utils.GetEnv("GRPC_URL", "grpc.testnet.layeredge.io:9090")
 	globalClientConfig.ContractAddr = utils.GetEnv("CONTRACT_ADDR", "cosmos1ufs3tlq4umljk0qfe8k5ya0x6hpavn897u2cnf9k0en9jr7qarqqt56709")
 
 	log.Printf("Initialized client configuration: GRPC_URL=%s, CONTRACT_ADDR=%s",
@@ -69,6 +69,8 @@ type CosmosQueryClient struct {
 }
 
 func (cqc *CosmosQueryClient) Init() error {
+	globalClientConfig.GrpcURL = utils.GetEnv("GRPC_URL", "grpc.testnet.layeredge.io:9090")
+	globalClientConfig.ContractAddr = utils.GetEnv("CONTRACT_ADDR", "cosmos1ufs3tlq4umljk0qfe8k5ya0x6hpavn897u2cnf9k0en9jr7qarqqt56709")
 	// Use the global configuration
 	cqc.config = globalClientConfig
 
