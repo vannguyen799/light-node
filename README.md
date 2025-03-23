@@ -71,6 +71,8 @@ If you encounter issues:
 3. Verify your wallet address and signature format
 4. Check logs for specific error messages
 
+Need more help? Visit the FAQ & Troubleshooting Guide: https://docs.layeredge.io/introduction/developer-guide/run-a-node/faq-and-troubleshooting-guide
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
